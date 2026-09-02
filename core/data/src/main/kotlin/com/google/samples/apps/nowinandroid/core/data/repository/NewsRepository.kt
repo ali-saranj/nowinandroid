@@ -17,6 +17,7 @@
 package com.google.samples.apps.nowinandroid.core.data.repository
 
 import com.google.samples.apps.nowinandroid.core.data.Syncable
+import com.google.samples.apps.nowinandroid.core.model.data.NewsItem
 import com.google.samples.apps.nowinandroid.core.model.data.NewsResource
 import kotlinx.coroutines.flow.Flow
 
@@ -35,7 +36,7 @@ data class NewsResourceQuery(
 )
 
 /**
- * Data layer implementation for [NewsResource]
+ * Data layer implementation for [NewsResource] and offline-first [NewsItem]s
  */
 interface NewsRepository : Syncable {
     /**
@@ -47,4 +48,19 @@ interface NewsRepository : Syncable {
             filterNewsIds = null,
         ),
     ): Flow<List<NewsResource>>
+
+    /**
+     * Returns all cached news items synced from the remote news feed.
+     */
+    fun getNews(): Flow<List<NewsItem>>
+
+    /**
+     * Returns a specific news item by its [id].
+     */
+    fun getNewsItem(id: String): Flow<NewsItem?>
+
+    /**
+     * Syncs news articles from the remote feed and persists them in local storage.
+     */
+    suspend fun syncNews(): Result<Unit>
 }

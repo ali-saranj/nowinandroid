@@ -49,8 +49,24 @@ class TestNewsRepository : NewsRepository {
         }
 
     /**
-     * A test-only API to allow controlling the list of news resources from tests.
+     * Backing hot flow for NewsItem testing.
      */
+    private val newsFlow: MutableSharedFlow<List<com.google.samples.apps.nowinandroid.core.model.data.NewsItem>> =
+        MutableSharedFlow(replay = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+    var syncNewsResult: Result<Unit> = Result.success(Unit)
+
+    override fun getNews(): Flow<List<com.google.samples.apps.nowinandroid.core.model.data.NewsItem>> = newsFlow
+
+    override fun getNewsItem(id: String): Flow<com.google.samples.apps.nowinandroid.core.model.data.NewsItem?> =
+        newsFlow.map { items -> items.firstOrNull { it.id == id } }
+
+    override suspend fun syncNews(): Result<Unit> = syncNewsResult
+
+    fun sendNews(news: List<com.google.samples.apps.nowinandroid.core.model.data.NewsItem>) {
+        newsFlow.tryEmit(news)
+    }
+
     fun sendNewsResources(newsResources: List<NewsResource>) {
         newsResourcesFlow.tryEmit(newsResources)
     }

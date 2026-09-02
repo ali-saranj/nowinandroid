@@ -64,6 +64,10 @@ class OfflineFirstNewsRepositoryTest {
 
     private lateinit var notifier: TestNotifier
 
+    private lateinit var newsDao: com.google.samples.apps.nowinandroid.core.data.testdoubles.TestNewsDao
+
+    private lateinit var newsFeedNetwork: com.google.samples.apps.nowinandroid.core.data.testdoubles.TestNewsFeedNetworkDataSource
+
     private lateinit var synchronizer: Synchronizer
 
     @Before
@@ -73,6 +77,8 @@ class OfflineFirstNewsRepositoryTest {
         topicDao = TestTopicDao()
         network = TestNiaNetworkDataSource()
         notifier = TestNotifier()
+        newsDao = com.google.samples.apps.nowinandroid.core.data.testdoubles.TestNewsDao()
+        newsFeedNetwork = com.google.samples.apps.nowinandroid.core.data.testdoubles.TestNewsFeedNetworkDataSource()
         synchronizer = TestSynchronizer(
             niaPreferencesDataSource,
         )
@@ -83,7 +89,59 @@ class OfflineFirstNewsRepositoryTest {
             topicDao = topicDao,
             network = network,
             notifier = notifier,
+            newsDao = newsDao,
+            newsFeedNetwork = newsFeedNetwork,
         )
+    }
+
+    @Test
+    fun syncNews_success_persistsArticlesToDao() = testScope.runTest {
+        newsFeedNetwork.response = mapOf(
+            "Technology" to listOf(
+                com.google.samples.apps.nowinandroid.core.network.model.NetworkNewsItem(
+                    title = "Tech News",
+                    link = "https://example.com/tech",
+                    source = "Tech Source",
+                ),
+            ),
+        )
+
+        val result = subject.syncNews()
+        assertTrue(result.isSuccess)
+
+        val news = subject.getNews().first()
+        assertEquals(1, news.size)
+        assertEquals("Tech News", news[0].title)
+        assertEquals("Technology", news[0].category)
+    }
+
+    @Test
+    fun syncNews_failure_preservesExistingData() = testScope.runTest {
+        // Pre-populate DAO
+        newsDao.upsertNews(
+            listOf(
+                com.google.samples.apps.nowinandroid.core.database.model.NewsEntity(
+                    id = "1",
+                    title = "Old News",
+                    link = "https://example.com/old",
+                    imageUrl = "",
+                    source = "Old Source",
+                    sourceIconUrl = "",
+                    category = "General",
+                ),
+            ),
+        )
+
+        // Make network call throw
+        newsFeedNetwork.shouldThrow = true
+
+        val result = subject.syncNews()
+        assertTrue(result.isFailure)
+
+        // Cached items are preserved
+        val news = subject.getNews().first()
+        assertEquals(1, news.size)
+        assertEquals("Old News", news[0].title)
     }
 
     @Test

@@ -92,4 +92,10 @@ internal object NetworkModule {
             }
             .build()
     }
+
+    @Provides
+    @Singleton
+    fun providesNewsFeedNetworkDataSource(
+        impl: com.google.samples.apps.nowinandroid.core.network.retrofit.RetrofitNewsFeedNetworkDataSource,
+    ): com.google.samples.apps.nowinandroid.core.network.NewsFeedNetworkDataSource = impl
 }

@@ -54,4 +54,9 @@ internal object DaosModule {
     fun providesRecentSearchQueryDao(
         database: NiaDatabase,
     ): RecentSearchQueryDao = database.recentSearchQueryDao()
+
+    @Provides
+    fun providesNewsDao(
+        database: NiaDatabase,
+    ): com.google.samples.apps.nowinandroid.core.database.dao.NewsDao = database.newsDao()
 }

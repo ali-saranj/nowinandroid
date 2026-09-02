@@ -21,14 +21,18 @@ import com.google.samples.apps.nowinandroid.core.data.changeListSync
 import com.google.samples.apps.nowinandroid.core.data.model.asEntity
 import com.google.samples.apps.nowinandroid.core.data.model.topicCrossReferences
 import com.google.samples.apps.nowinandroid.core.data.model.topicEntityShells
+import com.google.samples.apps.nowinandroid.core.database.dao.NewsDao
 import com.google.samples.apps.nowinandroid.core.database.dao.NewsResourceDao
 import com.google.samples.apps.nowinandroid.core.database.dao.TopicDao
+import com.google.samples.apps.nowinandroid.core.database.model.NewsEntity
 import com.google.samples.apps.nowinandroid.core.database.model.PopulatedNewsResource
 import com.google.samples.apps.nowinandroid.core.database.model.TopicEntity
 import com.google.samples.apps.nowinandroid.core.database.model.asExternalModel
 import com.google.samples.apps.nowinandroid.core.datastore.ChangeListVersions
 import com.google.samples.apps.nowinandroid.core.datastore.NiaPreferencesDataSource
+import com.google.samples.apps.nowinandroid.core.model.data.NewsItem
 import com.google.samples.apps.nowinandroid.core.model.data.NewsResource
+import com.google.samples.apps.nowinandroid.core.network.NewsFeedNetworkDataSource
 import com.google.samples.apps.nowinandroid.core.network.NiaNetworkDataSource
 import com.google.samples.apps.nowinandroid.core.network.model.NetworkNewsResource
 import com.google.samples.apps.nowinandroid.core.notifications.Notifier
@@ -51,6 +55,8 @@ internal class OfflineFirstNewsRepository @Inject constructor(
     private val topicDao: TopicDao,
     private val network: NiaNetworkDataSource,
     private val notifier: Notifier,
+    private val newsDao: NewsDao,
+    private val newsFeedNetwork: NewsFeedNetworkDataSource,
 ) : NewsRepository {
 
     override fun getNewsResources(
@@ -62,6 +68,35 @@ internal class OfflineFirstNewsRepository @Inject constructor(
         filterNewsIds = query.filterNewsIds ?: emptySet(),
     )
         .map { it.map(PopulatedNewsResource::asExternalModel) }
+
+    override fun getNews(): Flow<List<NewsItem>> =
+        newsDao.getNews().map { entities ->
+            entities.map(NewsEntity::asExternalModel)
+        }
+
+    override fun getNewsItem(id: String): Flow<NewsItem?> =
+        newsDao.getNewsItem(id).map { it?.asExternalModel() }
+
+    override suspend fun syncNews(): Result<Unit> = runCatching {
+        val feed = newsFeedNetwork.getNewsFeed()
+        val entities = feed.flatMap { (category, items) ->
+            items.map { item ->
+                NewsEntity(
+                    id = item.link.ifBlank { item.title.hashCode().toString() },
+                    title = item.title,
+                    link = item.link,
+                    imageUrl = item.og.orEmpty(),
+                    source = item.source,
+                    sourceIconUrl = item.sourceIcon.orEmpty(),
+                    category = category,
+                    content = "",
+                )
+            }
+        }
+        if (entities.isNotEmpty()) {
+            newsDao.upsertNews(entities)
+        }
+    }
 
     override suspend fun syncWith(synchronizer: Synchronizer): Boolean {
         var isFirstSync = false
