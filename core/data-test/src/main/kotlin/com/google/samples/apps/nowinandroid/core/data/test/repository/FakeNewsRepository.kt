@@ -68,4 +68,12 @@ class FakeNewsRepository @Inject constructor(
         }.flowOn(ioDispatcher)
 
     override suspend fun syncWith(synchronizer: Synchronizer) = true
+
+    override fun getNews(): Flow<List<com.google.samples.apps.nowinandroid.core.model.data.NewsItem>> =
+        kotlinx.coroutines.flow.flowOf(emptyList())
+
+    override fun getNewsItem(id: String): Flow<com.google.samples.apps.nowinandroid.core.model.data.NewsItem?> =
+        kotlinx.coroutines.flow.flowOf(null)
+
+    override suspend fun syncNews(): Result<Unit> = Result.success(Unit)
 }

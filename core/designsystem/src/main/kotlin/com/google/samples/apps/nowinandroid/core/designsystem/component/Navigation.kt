@@ -16,8 +16,12 @@
 
 package com.google.samples.apps.nowinandroid.core.designsystem.component
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -35,6 +39,7 @@ import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteItemCo
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScope
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -229,9 +234,25 @@ fun NiaNavigationSuiteScaffold(
         ),
         modifier = modifier,
     ) {
-        content()
+        val insetsToConsume = if (layoutType.isNavigationBar) {
+            PaddingValues(bottom = NiaNavigationDefaults.NavigationBarHeight)
+        } else {
+            PaddingValues()
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .consumeWindowInsets(insetsToConsume),
+        ) {
+            content()
+        }
     }
 }
+
+private val NavigationSuiteType.isNavigationBar: Boolean
+    get() = this == NavigationSuiteType.NavigationBar ||
+        this == NavigationSuiteType.ShortNavigationBarCompact ||
+        this == NavigationSuiteType.ShortNavigationBarMedium
 
 /**
  * A wrapper around [NavigationSuiteScope] to declare navigation items.
@@ -347,6 +368,8 @@ fun NiaNavigationRailPreview() {
  * Now in Android navigation default values.
  */
 object NiaNavigationDefaults {
+    val NavigationBarHeight = 80.dp
+
     @Composable
     fun navigationContentColor() = MaterialTheme.colorScheme.onSurfaceVariant
 
